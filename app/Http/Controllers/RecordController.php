@@ -46,6 +46,7 @@ class RecordController extends Controller
     {
         
 
+        
         if(!$request->room_id){ //沒有帶房間參數 代表要新建房間
             $player_list[]=$request->name;
             $limit =['low'=>0,'high'=>100]; 
@@ -66,12 +67,15 @@ class RecordController extends Controller
         }
 
         $record = Record::where('id',$request->room_id)->first();
+        if (!$record) {
+            return response()->json(['msg'=>"The room is not exist!"],403);
+        }
         $players_list = explode(',', $record->players);
         $cnt = count($players_list);
-        if ($cnt==0) {
-            return response()->json(['msg'=>"The room is not exist!"]);
-        }elseif ($cnt==5) {
-            return response()->json(['msg'=>"The room is full!"]);
+        if ($cnt==5) {
+            return response()->json(['msg'=>"The room is full!"],403);
+        }elseif ($record->status==2) {
+            return response()->json(['msg'=>"The room is gaming."],403);
         }else {
             $va = Validator::make($request->all(), [
                 'name' => ['required',
@@ -84,9 +88,7 @@ class RecordController extends Controller
             }
             $record = Record::where('id',$request->room_id)->first();
            
-            if ($record->status==2) {
-                return response()->json(['msg'=>"The room is gaming."],403);
-            }
+            
             $player = Userrecord::create([
                 'record_id'=>$request->room_id,
                 'name'=>$request->name,
@@ -122,9 +124,9 @@ class RecordController extends Controller
             if ($new_result->high > $request->answer  and  $request->answer > $new_result->low) {
                 
                 if ($game->bomb_num > $request->answer ) {
-                    $new_result->low=$request->answer+1;
+                    $new_result->low=$request->answer;
                 }elseif ($game->bomb_num < $request->answer) {
-                    $new_result->high=$request->answer-1;
+                    $new_result->high=$request->answer;
                 }else {
                     $game_update =  Record::where('id',$request->room_id)->update(['result'=>$request->name,'loser'=>$request->name]);
                     return response()->json(['result'=>"BOOOOMB"],200);
